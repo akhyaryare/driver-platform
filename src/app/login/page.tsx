@@ -48,7 +48,7 @@ export default function LoginPage() {
               <Map className="text-white" size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">DriverOps</h1>
+              <h1 className="text-xl font-bold text-gray-900">{process.env.NEXT_PUBLIC_APP_NAME ?? 'DriverOps'}</h1>
               <p className="text-sm text-gray-500">Fleet Management Platform</p>
             </div>
           </div>

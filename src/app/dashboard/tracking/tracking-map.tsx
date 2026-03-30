@@ -37,10 +37,13 @@ export function TrackingMap({ drivers }: { drivers: DriverInfo[] }) {
     if (!mapContainer.current || map.current) return
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
+    const lng = parseFloat(process.env.NEXT_PUBLIC_MAP_DEFAULT_LNG ?? '-0.1276')
+    const lat = parseFloat(process.env.NEXT_PUBLIC_MAP_DEFAULT_LAT ?? '51.5074')
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-0.1276, 51.5074], // Default: London
+      center: [lng, lat],
       zoom: 10,
     })
 

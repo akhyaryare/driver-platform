@@ -89,7 +89,7 @@ export function NotificationsClient({ history: initial }: { history: Notificatio
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Channel</label>
               <div className="flex gap-2">
@@ -149,7 +149,8 @@ export function NotificationsClient({ history: initial }: { history: Notificatio
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">Recent Notifications</h2>
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               {['Title', 'Channel', 'Recipients', 'Status', 'Sent At'].map(h => (
@@ -186,6 +187,7 @@ export function NotificationsClient({ history: initial }: { history: Notificatio
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
-import { Plus, Pencil, Trash2, UserCheck } from 'lucide-react'
+import { Plus, Pencil, Trash2, UserCheck, Mail } from 'lucide-react'
 
 type Driver = {
   id: string
@@ -18,17 +18,20 @@ type Driver = {
   driver_routes?: { id: string; status: string; date: string; routes: { id: string; name: string } | null }[]
 }
 
-type Route = { id: string; name: string }
+type Route = { id: string; name: string; route_number: string | null }
 
 const emptyForm = { name: '', phone: '', email: '', vehicle_plate: '', status: 'active' as 'active' | 'inactive' | 'on_route' }
 
 export function DriversClient({ drivers: initial, routes }: { drivers: Driver[]; routes: Route[] }) {
   const [drivers, setDrivers] = useState(initial)
-  const [modal, setModal] = useState<'create' | 'edit' | 'assign' | null>(null)
+  const [modal, setModal] = useState<'create' | 'edit' | 'assign' | 'invite' | null>(null)
   const [selected, setSelected] = useState<Driver | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [assignRouteId, setAssignRouteId] = useState('')
   const [assignDate, setAssignDate] = useState(new Date().toISOString().split('T')[0])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitePassword, setInvitePassword] = useState('')
+  const [inviteSuccess, setInviteSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -51,6 +54,15 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
     })
     setError('')
     setModal('edit')
+  }
+
+  function openInvite(driver: Driver) {
+    setSelected(driver)
+    setInviteEmail(driver.email ?? '')
+    setInvitePassword('')
+    setInviteSuccess(false)
+    setError('')
+    setModal('invite')
   }
 
   function openAssign(driver: Driver) {
@@ -96,6 +108,24 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
     if (!error) setDrivers(prev => prev.filter(d => d.id !== driver.id))
   }
 
+  async function handleInvite() {
+    if (!selected || !inviteEmail || !invitePassword) {
+      setError('Email and password are required.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    const res = await fetch('/api/invite-driver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId: selected.id, email: inviteEmail, password: invitePassword }),
+    })
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setError(json.error); return }
+    setInviteSuccess(true)
+  }
+
   async function handleAssign() {
     if (!selected || !assignRouteId) return
     setLoading(true)
@@ -128,7 +158,8 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               {['Name', 'Phone', 'Email', 'Vehicle', 'Status', 'Actions'].map(h => (
@@ -153,6 +184,9 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
                 <td className="px-4 py-3"><Badge value={driver.status} /></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openInvite(driver)} title="Give login">
+                      <Mail size={15} className="text-blue-500" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => openAssign(driver)} title="Assign route">
                       <UserCheck size={15} />
                     </Button>
@@ -168,6 +202,7 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Create / Edit Modal */}
@@ -203,6 +238,28 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
         </div>
       </Modal>
 
+      {/* Invite Driver Modal */}
+      <Modal open={modal === 'invite'} onClose={() => setModal(null)} title={`Give Login — ${selected?.name}`}>
+        <div className="space-y-4">
+          {inviteSuccess ? (
+            <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
+              Login created! The driver can now sign in at driver-platform.vercel.app/login
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500">Create a username and password for this driver. Share these with them directly.</p>
+              <Input label="Email" type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="driver@example.com" />
+              <Input label="Password" type="text" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="e.g. their phone number" />
+              {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+              <div className="flex gap-3 pt-2">
+                <Button variant="secondary" onClick={() => setModal(null)} className="flex-1">Cancel</Button>
+                <Button onClick={handleInvite} loading={loading} className="flex-1">Create Login</Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
       {/* Assign Route Modal */}
       <Modal open={modal === 'assign'} onClose={() => setModal(null)} title={`Assign Route — ${selected?.name}`}>
         <div className="space-y-4">
@@ -217,7 +274,7 @@ export function DriversClient({ drivers: initial, routes }: { drivers: Driver[];
                   value={assignRouteId}
                   onChange={e => setAssignRouteId(e.target.value)}
                 >
-                  {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  {routes.map(r => <option key={r.id} value={r.id}>{r.route_number ? `${r.route_number} — ${r.name}` : r.name}</option>)}
                 </select>
               </div>
               <Input

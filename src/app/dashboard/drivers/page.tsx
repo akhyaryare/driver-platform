@@ -8,8 +8,9 @@ export default async function DriversPage() {
     supabase
       .from('drivers')
       .select('id, profile_id, name, phone, email, vehicle_plate, status, created_at, updated_at')
-      .order('created_at', { ascending: false }),
-    supabase.from('routes').select('id, name').eq('status', 'active'),
+      .order('created_at', { ascending: false })
+      .limit(500),
+    supabase.from('routes').select('id, name, route_number').eq('status', 'active').limit(500),
   ])
 
   return <DriversClient drivers={drivers ?? []} routes={routes ?? []} />

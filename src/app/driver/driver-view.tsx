@@ -4,29 +4,38 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Navigation, MessageCircle, LogOut, Wifi, WifiOff } from 'lucide-react'
+import { MapPin, Navigation, MessageCircle, LogOut, Wifi, WifiOff, ClipboardList, CheckCircle } from 'lucide-react'
 
 type Driver = { id: string; name: string; status: string; vehicle_plate: string | null }
 type Assignment = {
   id: string
   status: string
   date: string
-  routes: { id: string; name: string; description: string | null; waypoints: unknown } | null
+  routes: { id: string; name: string; route_number: string | null; description: string | null; waypoints: unknown } | null
 }
+type Stop = { id: string; route_id: string; postcode: string; label: string | null; order_index: number }
 type Group = { id: string; name: string; link: string }
+
+const emptyReport = { parcels_taken: '', parcels_delivered: '', parcels_failed: '', notes: '', route_id: '', route_number_input: '' }
 
 export function DriverView({
   driver,
   assignments,
+  stops,
   groups,
 }: {
   driver: Driver | null
   assignments: Assignment[]
+  stops: Stop[]
   groups: Group[]
 }) {
   const [tracking, setTracking] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<string | null>(null)
+  const [report, setReport] = useState(emptyReport)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportSuccess, setReportSuccess] = useState(false)
+  const [reportError, setReportError] = useState('')
   const watchId = useRef<number | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -92,6 +101,47 @@ export function DriverView({
     await stopTracking()
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function submitReport() {
+    if (!driver) return
+    if (!report.route_number_input.trim()) {
+      setReportError('Please enter the route number.')
+      return
+    }
+    if (!report.parcels_taken || !report.parcels_delivered) {
+      setReportError('Please fill in Taken and Delivered.')
+      return
+    }
+    setReportLoading(true)
+    setReportError('')
+
+    // Look up route_id by route_number
+    const { data: routeData } = await supabase
+      .from('routes')
+      .select('id')
+      .ilike('route_number', report.route_number_input.trim())
+      .single()
+
+    const routePrefix = `[Route: ${report.route_number_input.trim()}]`
+    const combinedNotes = report.notes.trim()
+      ? `${routePrefix} ${report.notes.trim()}`
+      : routePrefix
+
+    const { error } = await supabase.from('delivery_reports').upsert({
+      driver_id: driver.id,
+      route_id: routeData?.id ?? null,
+      date: new Date().toISOString().split('T')[0],
+      parcels_taken: parseInt(report.parcels_taken),
+      parcels_delivered: parseInt(report.parcels_delivered),
+      parcels_failed: parseInt(report.parcels_failed),
+      notes: combinedNotes,
+    }, { onConflict: 'driver_id,date' })
+    setReportLoading(false)
+    if (error) { setReportError(error.message); return }
+    setReportSuccess(true)
+    setReport(emptyReport)
+    setTimeout(() => setReportSuccess(false), 4000)
   }
 
   async function updateAssignmentStatus(assignmentId: string, status: 'in_progress' | 'completed') {
@@ -182,11 +232,31 @@ export function DriverView({
               {assignments.map(a => (
                 <div key={a.id} className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium text-sm text-gray-900">{a.routes?.name ?? 'Unknown Route'}</p>
+                    <div>
+                      {a.routes?.route_number && (
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mr-1">{a.routes.route_number}</span>
+                      )}
+                      <span className="font-medium text-sm text-gray-900">{a.routes?.name ?? 'Unknown Route'}</span>
+                    </div>
                     <Badge value={a.status} />
                   </div>
                   {a.routes?.description && (
                     <p className="text-xs text-gray-500 mb-2">{a.routes.description}</p>
+                  )}
+                  {/* Postcodes */}
+                  {a.routes && stops.filter(s => s.route_id === a.routes!.id).length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-xs font-medium text-gray-400 mb-1">Delivery postcodes</p>
+                      <div className="flex flex-wrap gap-1">
+                        {stops
+                          .filter(s => s.route_id === a.routes!.id)
+                          .map(s => (
+                            <span key={s.id} className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                              {s.postcode}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
                   )}
                   <div className="flex gap-2">
                     {a.status === 'pending' && (
@@ -202,6 +272,98 @@ export function DriverView({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Daily Report */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <ClipboardList size={18} className="text-blue-600" />
+            Daily Report
+          </h2>
+
+          {reportSuccess ? (
+            <div className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-lg">
+              <CheckCircle size={18} />
+              <span className="text-sm font-medium">Report submitted successfully!</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-500">Route Number <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter route number"
+                  value={report.route_number_input}
+                  onChange={e => setReport(r => ({ ...r, route_number_input: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-gray-500">Taken</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center font-semibold text-gray-900"
+                    placeholder="0"
+                    value={report.parcels_taken}
+                    onChange={e => {
+                      const taken = e.target.value
+                      const delivered = report.parcels_delivered
+                      const failed = Math.max(0, parseInt(taken || '0') - parseInt(delivered || '0'))
+                      setReport(r => ({ ...r, parcels_taken: taken, parcels_failed: String(failed) }))
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-green-600">Delivered</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-semibold text-green-600"
+                    placeholder="0"
+                    value={report.parcels_delivered}
+                    onChange={e => {
+                      const delivered = e.target.value
+                      const taken = report.parcels_taken
+                      const failed = Math.max(0, parseInt(taken || '0') - parseInt(delivered || '0'))
+                      setReport(r => ({ ...r, parcels_delivered: delivered, parcels_failed: String(failed) }))
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-red-500">Failed (auto)</label>
+                  <input
+                    type="number"
+                    readOnly
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-center font-semibold text-red-500 cursor-default"
+                    value={report.parcels_failed}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-500">Notes (optional)</label>
+                <textarea
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={2}
+                  placeholder="Any issues, delays, or comments..."
+                  value={report.notes}
+                  onChange={e => setReport(r => ({ ...r, notes: e.target.value }))}
+                />
+              </div>
+
+              {reportError && (
+                <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{reportError}</p>
+              )}
+
+              <Button onClick={submitReport} loading={reportLoading} className="w-full">
+                <ClipboardList size={16} />
+                Submit Today&apos;s Report
+              </Button>
             </div>
           )}
         </div>

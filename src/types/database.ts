@@ -66,6 +66,7 @@ export type Database = {
         Row: {
           id: string
           name: string
+          route_number: string | null
           description: string | null
           waypoints: Json
           status: 'active' | 'inactive'
@@ -75,6 +76,7 @@ export type Database = {
         Insert: {
           id?: string
           name: string
+          route_number?: string | null
           description?: string | null
           waypoints?: Json
           status?: 'active' | 'inactive'
@@ -83,6 +85,7 @@ export type Database = {
         }
         Update: {
           name?: string
+          route_number?: string | null
           description?: string | null
           waypoints?: Json
           status?: 'active' | 'inactive'
@@ -178,6 +181,65 @@ export type Database = {
         Update: {
           status?: 'pending' | 'sent' | 'failed'
           sent_at?: string | null
+        }
+        Relationships: []
+      }
+      delivery_reports: {
+        Row: {
+          id: string
+          driver_id: string
+          route_id: string | null
+          route_number_text: string | null
+          date: string
+          parcels_taken: number
+          parcels_delivered: number
+          parcels_failed: number
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          driver_id: string
+          route_id?: string | null
+          route_number_text?: string | null
+          date?: string
+          parcels_taken: number
+          parcels_delivered: number
+          parcels_failed: number
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          route_id?: string | null
+          route_number_text?: string | null
+          parcels_taken?: number
+          parcels_delivered?: number
+          parcels_failed?: number
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      route_stops: {
+        Row: {
+          id: string
+          route_id: string
+          postcode: string
+          label: string | null
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          route_id: string
+          postcode: string
+          label?: string | null
+          order_index?: number
+          created_at?: string
+        }
+        Update: {
+          postcode?: string
+          label?: string | null
+          order_index?: number
         }
         Relationships: []
       }

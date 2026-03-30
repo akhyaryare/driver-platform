@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DriverView } from './driver-view'
+import { InstallPrompt } from '@/components/install-prompt'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,9 +23,19 @@ export default async function DriverPage() {
   const { data: assignments } = driver
     ? await supabase
         .from('driver_routes')
-        .select('id, status, date, routes(id, name, description, waypoints)')
+        .select('id, status, date, routes(id, name, route_number, description, waypoints)')
         .eq('driver_id', driver.id)
         .eq('date', today)
+    : { data: [] }
+
+  // Get postcodes for each assigned route
+  const routeIds = (assignments ?? []).map((a: any) => a.routes?.id).filter(Boolean)
+  const { data: stops } = routeIds.length > 0
+    ? await supabase
+        .from('route_stops')
+        .select('id, route_id, postcode, label, order_index')
+        .in('route_id', routeIds)
+        .order('order_index')
     : { data: [] }
 
   // Get WhatsApp groups
@@ -34,10 +45,14 @@ export default async function DriverPage() {
     .eq('active', true)
 
   return (
-    <DriverView
-      driver={driver ?? null}
-      assignments={assignments ?? []}
-      groups={groups ?? []}
-    />
+    <>
+      <DriverView
+        driver={driver ?? null}
+        assignments={assignments ?? []}
+        stops={stops ?? []}
+        groups={groups ?? []}
+      />
+      <InstallPrompt />
+    </>
   )
 }

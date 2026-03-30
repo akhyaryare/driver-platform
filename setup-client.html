@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Client Setup — DriverOps</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; padding: 2rem 1rem }
+  .container { max-width: 720px; margin: 0 auto }
+  h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem }
+  .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem }
+  .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 1.5rem }
+  .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a; display: flex; align-items: center; gap: 0.5rem }
+  .step-badge { background: #2563eb; color: white; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px }
+  .field { margin-bottom: 1rem }
+  label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem }
+  label span { color: #94a3b8; font-weight: 400 }
+  input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; font-family: inherit; color: #1e293b; background: white; transition: border-color 0.15s }
+  input:focus, select:focus { outline: none; border-color: #2563eb }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem }
+  .btn { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 0.7rem 1.5rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.15s; width: 100% }
+  .btn:hover { background: #1d4ed8 }
+  .btn-sm { background: #e2e8f0; color: #374151; border: none; border-radius: 6px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s }
+  .btn-sm:hover { background: #cbd5e1 }
+  .btn-sm.copied { background: #dcfce7; color: #166534 }
+  .output-section { display: none }
+  .output-section.visible { display: block }
+  .env-block { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 1.25rem; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.8; position: relative; white-space: pre; overflow-x: auto }
+  .env-block .comment { color: #64748b }
+  .env-block .key { color: #93c5fd }
+  .env-block .val { color: #86efac }
+  .copy-btn { position: absolute; top: 0.75rem; right: 0.75rem; background: #1e40af; color: white; border: none; border-radius: 6px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer }
+  .copy-btn:hover { background: #1d4ed8 }
+  .copy-btn.copied { background: #166534 }
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 0.6rem }
+  .checklist li { display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.88rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0 }
+  .checklist li .icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px }
+  .checklist li strong { display: block; font-weight: 600; margin-bottom: 0.1rem }
+  .checklist li span { color: #64748b; font-size: 0.82rem }
+  .tag { display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 0.4rem }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0 }
+  .coord-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; align-items: end }
+  .lookup-btn { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s }
+  .lookup-btn:hover { background: #dbeafe }
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.84rem; color: #1e40af; margin-bottom: 1rem }
+  @media (max-width: 600px) { .row, .coord-row { grid-template-columns: 1fr } .coord-row .lookup-btn { width: 100% } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🚀 New Client Setup</h1>
+  <p class="subtitle">Fill in the details below to generate all the environment variables for a new client deployment.</p>
+
+  <!-- STEP 1: Client Details -->
+  <div class="card">
+    <h2><span class="step-badge">1</span> Client Details</h2>
+    <div class="row">
+      <div class="field">
+        <label>Company Name <span>(shown in app)</span></label>
+        <input type="text" id="appName" placeholder="e.g. FastFleet Logistics" oninput="update()">
+      </div>
+      <div class="field">
+        <label>Admin Email <span>(their login)</span></label>
+        <input type="email" id="adminEmail" placeholder="admin@company.com" oninput="update()">
+      </div>
+    </div>
+    <div class="field">
+      <label>City / Area <span>(for the tracking map)</span></label>
+      <div class="coord-row">
+        <div class="field" style="margin:0">
+          <input type="number" step="any" id="mapLat" placeholder="Latitude e.g. 52.4862" oninput="update()">
+        </div>
+        <div class="field" style="margin:0">
+          <input type="number" step="any" id="mapLng" placeholder="Longitude e.g. -1.8904" oninput="update()">
+        </div>
+        <button class="lookup-btn" onclick="openMaps()">📍 Find coords</button>
+      </div>
+      <p style="font-size:0.78rem;color:#94a3b8;margin-top:0.4rem">Click "Find coords" → search the city → right-click on the map → copy the coordinates shown</p>
+    </div>
+  </div>
+
+  <!-- STEP 2: Supabase -->
+  <div class="card">
+    <h2><span class="step-badge">2</span> Supabase Project <span class="tag">New project per client</span></h2>
+    <div class="info-box">
+      Create a new project at <strong>supabase.com</strong> for this client → Settings → API → copy the values below.
+    </div>
+    <div class="field">
+      <label>Project URL</label>
+      <input type="text" id="supabaseUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" oninput="update()">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Anon / Public Key</label>
+        <input type="text" id="supabaseAnon" placeholder="eyJhbGci..." oninput="update()">
+      </div>
+      <div class="field">
+        <label>Service Role Key</label>
+        <input type="text" id="supabaseService" placeholder="eyJhbGci..." oninput="update()">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Notifications -->
+  <div class="card">
+    <h2><span class="step-badge">3</span> SMS &amp; Email <span class="tag">Optional</span></h2>
+    <div class="row">
+      <div class="field">
+        <label>Twilio Account SID <span>(SMS)</span></label>
+        <input type="text" id="twilioSid" placeholder="ACxxxxxxxxxxxxxxxx" oninput="update()">
+      </div>
+      <div class="field">
+        <label>Twilio Auth Token</label>
+        <input type="text" id="twilioToken" placeholder="xxxxxxxxxxxxxxxx" oninput="update()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Twilio Phone Number</label>
+        <input type="text" id="twilioPhone" placeholder="+447700000000" oninput="update()">
+      </div>
+      <div class="field">
+        <label>Resend API Key <span>(emails)</span></label>
+        <input type="text" id="resendKey" placeholder="re_xxxxxxxx" oninput="update()">
+      </div>
+    </div>
+    <div class="field">
+      <label>From Email Address</label>
+      <input type="email" id="fromEmail" placeholder="notifications@clientdomain.com" oninput="update()">
+    </div>
+  </div>
+
+  <!-- STEP 4: Mapbox -->
+  <div class="card">
+    <h2><span class="step-badge">4</span> Mapbox Token</h2>
+    <div class="field">
+      <label>Mapbox Public Token <span>(for the live tracking map)</span></label>
+      <input type="text" id="mapboxToken" placeholder="pk.eyJ1Ii..." oninput="update()">
+    </div>
+    <p style="font-size:0.78rem;color:#94a3b8">Get a free token at mapbox.com → Account → Tokens. You can reuse your own token for all clients.</p>
+  </div>
+
+  <button class="btn" onclick="generate()">⚡ Generate Environment Variables</button>
+
+  <!-- OUTPUT -->
+  <div class="output-section" id="output" style="margin-top:1.5rem">
+
+    <div class="card">
+      <h2>✅ Vercel Environment Variables</h2>
+      <p style="font-size:0.84rem;color:#64748b;margin-bottom:1rem">Copy everything below → Vercel → Settings → Environment Variables → paste one by one, or use the "Copy all" button.</p>
+      <div style="position:relative">
+        <div class="env-block" id="envBlock"></div>
+        <button class="copy-btn" id="copyAllBtn" onclick="copyAll()">Copy all</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Setup Checklist</h2>
+      <ul class="checklist">
+        <li><span class="icon">1️⃣</span><div><strong>Create Supabase project</strong><span>supabase.com → New project → run the schema.sql file from the repo in the SQL editor</span></div></li>
+        <li><span class="icon">2️⃣</span><div><strong>Create Vercel project</strong><span>vercel.com → Add New → Project → import driver-platform repo → set all env vars above</span></div></li>
+        <li><span class="icon">3️⃣</span><div><strong>Run database schema</strong><span>Supabase → SQL Editor → paste contents of <code>supabase/schema.sql</code> → Run</span></div></li>
+        <li><span class="icon">4️⃣</span><div><strong>Create admin user</strong><span>Supabase → Authentication → Users → Invite user (<span id="adminEmailDisplay">admin email</span>) → then in SQL editor run:<br><br><code>UPDATE profiles SET role = 'admin' WHERE email = '<span class="adminEmailInline">admin@company.com</span>';</code></span></div></li>
+        <li><span class="icon">5️⃣</span><div><strong>Enable Realtime</strong><span>Supabase → Database → Replication → enable <code>delivery_reports</code> and <code>driver_locations</code> tables</span></div></li>
+        <li><span class="icon">6️⃣</span><div><strong>Set custom domain (optional)</strong><span>Vercel → Settings → Domains → add client's domain</span></div></li>
+        <li><span class="icon">7️⃣</span><div><strong>Test login</strong><span>Visit the deployed URL → log in as admin → create a test driver → invite them → confirm they can log in</span></div></li>
+      </ul>
+    </div>
+
+    <div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <h2 style="color:#166534">💰 What to charge</h2>
+      <div style="font-size:0.87rem;color:#166534;line-height:1.7">
+        <strong>Setup fee:</strong> £300–500 (one time — covers your 1–2 hours of setup + configuration)<br>
+        <strong>Monthly retainer:</strong> £150–250/month (covers hosting ~£20/month + your support time)<br>
+        <strong>Your costs per client:</strong> Supabase free tier (up to 50,000 rows), Vercel free tier, Mapbox free tier (50k loads/month)<br>
+        <strong>Net margin:</strong> ~£130–230/month per client after costs
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function update() {
+  const adminEmail = document.getElementById('adminEmail').value
+  document.querySelectorAll('.adminEmailInline').forEach(el => el.textContent = adminEmail || 'admin@company.com')
+  document.getElementById('adminEmailDisplay').textContent = adminEmail || 'admin email'
+}
+
+function openMaps() {
+  window.open('https://www.google.com/maps', '_blank')
+}
+
+function generate() {
+  const appName = document.getElementById('appName').value.trim()
+  const mapLat = document.getElementById('mapLat').value.trim()
+  const mapLng = document.getElementById('mapLng').value.trim()
+  const supabaseUrl = document.getElementById('supabaseUrl').value.trim()
+  const supabaseAnon = document.getElementById('supabaseAnon').value.trim()
+  const supabaseService = document.getElementById('supabaseService').value.trim()
+  const mapboxToken = document.getElementById('mapboxToken').value.trim()
+  const twilioSid = document.getElementById('twilioSid').value.trim()
+  const twilioToken = document.getElementById('twilioToken').value.trim()
+  const twilioPhone = document.getElementById('twilioPhone').value.trim()
+  const resendKey = document.getElementById('resendKey').value.trim()
+  const fromEmail = document.getElementById('fromEmail').value.trim()
+
+  if (!appName || !supabaseUrl || !supabaseAnon) {
+    alert('Please fill in at least: Company Name, Supabase URL, and Supabase Anon Key')
+    return
+  }
+
+  const lines = [
+    { comment: '# App branding' },
+    { key: 'NEXT_PUBLIC_APP_NAME', val: appName },
+    { blank: true },
+    { comment: '# Map default centre' },
+    { key: 'NEXT_PUBLIC_MAP_DEFAULT_LAT', val: mapLat || '51.5074' },
+    { key: 'NEXT_PUBLIC_MAP_DEFAULT_LNG', val: mapLng || '-0.1276' },
+    { blank: true },
+    { comment: '# Supabase' },
+    { key: 'NEXT_PUBLIC_SUPABASE_URL', val: supabaseUrl },
+    { key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', val: supabaseAnon },
+    { key: 'SUPABASE_SERVICE_ROLE_KEY', val: supabaseService || '← PASTE SERVICE ROLE KEY' },
+    { blank: true },
+    { comment: '# Mapbox (live tracking map)' },
+    { key: 'NEXT_PUBLIC_MAPBOX_TOKEN', val: mapboxToken || '← PASTE MAPBOX TOKEN' },
+    { blank: true },
+    { comment: '# SMS (Twilio)' },
+    { key: 'TWILIO_ACCOUNT_SID', val: twilioSid || '← PASTE TWILIO SID' },
+    { key: 'TWILIO_AUTH_TOKEN', val: twilioToken || '← PASTE TWILIO TOKEN' },
+    { key: 'TWILIO_PHONE_NUMBER', val: twilioPhone || '← PASTE TWILIO PHONE' },
+    { blank: true },
+    { comment: '# Email (Resend)' },
+    { key: 'RESEND_API_KEY', val: resendKey || '← PASTE RESEND KEY' },
+    { key: 'RESEND_FROM_EMAIL', val: fromEmail || '← PASTE FROM EMAIL' },
+  ]
+
+  let html = ''
+  let plain = ''
+  lines.forEach(l => {
+    if (l.blank) { html += '\n'; plain += '\n'; return }
+    if (l.comment) { html += `<span class="comment">${l.comment}</span>\n`; plain += l.comment + '\n'; return }
+    html += `<span class="key">${l.key}</span>=<span class="val">${l.val}</span>\n`
+    plain += `${l.key}=${l.val}\n`
+  })
+
+  document.getElementById('envBlock').innerHTML = html
+  document.getElementById('envBlock').dataset.plain = plain
+
+  document.getElementById('output').classList.add('visible')
+  document.getElementById('output').scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function copyAll() {
+  const text = document.getElementById('envBlock').dataset.plain || ''
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyAllBtn')
+    btn.textContent = '✓ Copied!'
+    btn.classList.add('copied')
+    setTimeout(() => { btn.textContent = 'Copy all'; btn.classList.remove('copied') }, 2000)
+  })
+}
+</script>
+</body>
+</html>

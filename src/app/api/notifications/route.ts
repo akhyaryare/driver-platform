@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
             <h2 style="color: #1e40af;">${title}</h2>
             <p style="color: #374151; line-height: 1.6;">${message}</p>
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-            <p style="color: #9ca3af; font-size: 12px;">Sent via DriverOps platform</p>
+            <p style="color: #9ca3af; font-size: 12px;">Sent via ${process.env.NEXT_PUBLIC_APP_NAME ?? 'DriverOps'} platform</p>
           </div>
         `,
       })

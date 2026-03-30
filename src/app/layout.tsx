@@ -4,14 +4,16 @@ import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'DriverOps'
+
 export const metadata: Metadata = {
-  title: 'DriverOps',
+  title: appName,
   description: 'Fleet driver management platform',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'DriverOps',
+    title: appName,
   },
 }
 
