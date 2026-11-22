@@ -38,7 +38,7 @@ begin
     where n.nspname='public' and p.proname in ('handle_new_user','is_admin')
       and not exists (
         select 1 from unnest(coalesce(p.proconfig,array[]::text[])) config
-        where config='search_path='
+        where config like 'search_path=%'
       )
   ) then raise exception 'Privileged function search_path not pinned'; end if;
 end
