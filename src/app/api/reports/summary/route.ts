@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
+  const caller = await createClient()
+  const { data: { user }, error: authError } = await caller.auth.getUser()
+  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: profile, error: profileError } = await caller
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profileError || profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
 

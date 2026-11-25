@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
+  const caller = await createClient()
+  const { data: { user }, error: authError } = await caller.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { data: profile, error: profileError } = await caller
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profileError || profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { driverId, email, password } = await req.json()
 
   if (!driverId || !email || !password) {
@@ -9,6 +23,16 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createAdminClient()
+
+  const { data: targetDriver, error: driverError } = await supabase
+    .from('drivers')
+    .select('id, profile_id')
+    .eq('id', driverId)
+    .is('profile_id', null)
+    .single()
+  if (driverError || !targetDriver || targetDriver.profile_id) {
+    return NextResponse.json({ error: 'Driver not found or already linked' }, { status: 400 })
+  }
 
   let userId: string
 
@@ -20,28 +44,10 @@ export async function POST(req: NextRequest) {
   })
 
   if (createError) {
-    if (!createError.message.toLowerCase().includes('already been registered')) {
-      return NextResponse.json({ error: createError.message }, { status: 400 })
-    }
-
-    // User already exists — find them by email in profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'User exists but could not be found. Try a different email.' }, { status: 400 })
-    }
-
-    userId = profile.id
-
-    // Update their password so the credentials you set are valid
-    await supabase.auth.admin.updateUserById(userId, { password })
-  } else {
-    userId = userData.user.id
+    // Never reset credentials of an existing user during driver invitation.
+    return NextResponse.json({ error: 'Unable to create driver account. Use a different email.' }, { status: 400 })
   }
+  userId = userData.user.id
 
   // Ensure profile has driver role
   await supabase.from('profiles').upsert({
